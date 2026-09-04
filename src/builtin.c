@@ -1,10 +1,9 @@
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "builtin.h"
-
 #include "executor.h"
-#include "cprocess.h"
 
 int builtin_exit(char *argv[]) {
     (void)argv;
@@ -15,7 +14,7 @@ int builtin_cd(char *argv[]) {
     if (argv[1] == NULL)
         return EXECUTE_OK;
 
-    if (process_chdir(argv[1]) != 0) {
+    if (chdir(argv[1]) != 0) {
         perror("cd");
         return EXECUTE_OK;
     }

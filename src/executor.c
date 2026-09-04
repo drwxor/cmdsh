@@ -1,9 +1,29 @@
 #include <stddef.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
 #include "executor.h"
-
 #include "builtin.h"
-#include "cprocess.h"
+
+static int process_execute(char *argv[]) {
+    pid_t pid = fork();
+
+    if (pid < 0)
+        return -1;
+
+    if (pid == 0) {
+        execvp(argv[0], argv);
+        _exit(127);
+    }
+
+    int status;
+
+    if (waitpid(pid, &status, 0) < 0)
+        return -1;
+
+    return status;
+}
 
 int execute(struct token tokens[], int count) {
     char *argv[MAX_ARGS];
