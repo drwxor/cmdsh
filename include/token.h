@@ -6,9 +6,10 @@
 enum token_type {
     TOKEN_WORD,
     TOKEN_AND_IF,
+    TOKEN_PIPE,
     TOKEN_REDIRECT_OUT,
     TOKEN_REDIRECT_APPEND,
-    TOKEN_PIPE,
+    TOKEN_REDIRECT_IN
 };
 
 struct token {

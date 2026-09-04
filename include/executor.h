@@ -5,9 +5,13 @@
 
 #define MAX_ARGS 64
 
-#define EXECUTE_OK 0
-#define EXECUTE_EXIT 1
+enum execute_result {
+    EXECUTE_OK,
+    EXECUTE_EXIT,
+    EXECUTE_UNKNOWN,
+    EXECUTE_ERROR
+};
 
-int execute(struct token tokens[], int count);
+enum execute_result execute(struct token tokens[], int count);
 
 #endif // EXECUTOR_H

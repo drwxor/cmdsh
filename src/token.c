@@ -38,6 +38,14 @@ int tokenize(char *input, struct token tokens[]) {
             continue;
         }
 
+        if (*p == '<') {
+            tokens[count].type = TOKEN_REDIRECT_IN;
+            tokens[count].value = "<";
+            count++;
+            p++;
+            continue;
+        }
+
         if (*p == '|') {
             tokens[count].type = TOKEN_PIPE;
             tokens[count].value = "|";

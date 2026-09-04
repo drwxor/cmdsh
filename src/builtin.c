@@ -16,7 +16,7 @@ int builtin_cd(char *argv[]) {
 
     if (chdir(argv[1]) != 0) {
         perror("cd");
-        return EXECUTE_OK;
+        return EXECUTE_ERROR;
     }
 
     return EXECUTE_OK;
