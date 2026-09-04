@@ -1,8 +1,8 @@
+#include <fcntl.h>
 #include <stddef.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
-#include <fcntl.h>
 
 #include "executor.h"
 #include "builtin.h"
@@ -69,7 +69,7 @@ static enum execute_result process_execute_pipe(
     return EXECUTE_OK;
 }
 
-static enum execute_result process_execute(
+static int process_execute(
     char *argv[],
     char *input_file,
     char *output_file,
@@ -78,7 +78,7 @@ static enum execute_result process_execute(
     pid_t pid = fork();
 
     if (pid < 0)
-        return EXECUTE_ERROR;
+        return -1;
 
     if (pid == 0) {
         int fd;
@@ -89,7 +89,9 @@ static enum execute_result process_execute(
             if (fd < 0)
                 _exit(126);
 
-            dup2(fd, STDIN_FILENO);
+            if (dup2(fd, STDIN_FILENO) < 0)
+                _exit(126);
+
             close(fd);
         }
 
@@ -106,7 +108,9 @@ static enum execute_result process_execute(
             if (fd < 0)
                 _exit(126);
 
-            dup2(fd, STDOUT_FILENO);
+            if (dup2(fd, STDOUT_FILENO) < 0)
+                _exit(126);
+
             close(fd);
         }
 
@@ -117,12 +121,15 @@ static enum execute_result process_execute(
     int status;
 
     if (waitpid(pid, &status, 0) < 0)
-        return EXECUTE_ERROR;
+        return -1;
 
-    if (WIFEXITED(status) && WEXITSTATUS(status) == 127)
-        return EXECUTE_UNKNOWN;
+    if (WIFEXITED(status))
+        return WEXITSTATUS(status);
 
-    return EXECUTE_OK;
+    if (WIFSIGNALED(status))
+        return 128 + WTERMSIG(status);
+
+    return 1;
 }
 
 enum execute_result execute(struct token tokens[], int count) {
@@ -131,11 +138,18 @@ enum execute_result execute(struct token tokens[], int count) {
 
     int left_argc = 0;
     int right_argc = 0;
+
     int pipe_index = -1;
+    int and_index = -1;
 
     for (int i = 0; i < count; i++) {
         if (tokens[i].type == TOKEN_PIPE) {
             pipe_index = i;
+            break;
+        }
+
+        if (tokens[i].type == TOKEN_AND_IF) {
+            and_index = i;
             break;
         }
 
@@ -146,6 +160,31 @@ enum execute_result execute(struct token tokens[], int count) {
             return EXECUTE_ERROR;
 
         argv_left[left_argc++] = tokens[i].value;
+    }
+
+    if (and_index != -1) {
+        argv_left[left_argc] = NULL;
+
+        if (left_argc == 0)
+            return EXECUTE_ERROR;
+
+        int status = process_execute(
+            argv_left,
+            NULL,
+            NULL,
+            0
+        );
+
+        if (status == 127)
+            return EXECUTE_UNKNOWN;
+
+        if (status != 0)
+            return EXECUTE_OK;
+
+        return execute(
+            &tokens[and_index + 1],
+            count - and_index - 1
+        );
     }
 
     if (pipe_index != -1) {
@@ -165,7 +204,10 @@ enum execute_result execute(struct token tokens[], int count) {
         if (left_argc == 0 || right_argc == 0)
             return EXECUTE_ERROR;
 
-        return process_execute_pipe(argv_left, argv_right);
+        return process_execute_pipe(
+            argv_left,
+            argv_right
+        );
     }
 
     argv_left[left_argc] = NULL;
@@ -178,5 +220,15 @@ enum execute_result execute(struct token tokens[], int count) {
     if (result != -1)
         return result;
 
-    return process_execute(argv_left, NULL, NULL, 0);
+    int status = process_execute(
+        argv_left,
+        NULL,
+        NULL,
+        0
+    );
+
+    if (status == 127)
+        return EXECUTE_UNKNOWN;
+
+    return EXECUTE_OK;
 }
