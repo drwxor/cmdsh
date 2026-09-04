@@ -73,7 +73,8 @@ static int process_execute(
     char *argv[],
     char *input_file,
     char *output_file,
-    int append
+    int append,
+    int background
 ) {
     pid_t pid = fork();
 
@@ -118,6 +119,9 @@ static int process_execute(
         _exit(127);
     }
 
+    if (background)
+        return 0;
+
     int status;
 
     if (waitpid(pid, &status, 0) < 0)
@@ -141,6 +145,13 @@ enum execute_result execute(struct token tokens[], int count) {
 
     int pipe_index = -1;
     int and_index = -1;
+    int background = 0;
+
+    if (count > 0 &&
+        tokens[count - 1].type == TOKEN_BACKGROUND) {
+        background = 1;
+        count--;
+    }
 
     for (int i = 0; i < count; i++) {
         if (tokens[i].type == TOKEN_PIPE) {
@@ -172,6 +183,7 @@ enum execute_result execute(struct token tokens[], int count) {
             argv_left,
             NULL,
             NULL,
+            0,
             0
         );
 
@@ -224,7 +236,8 @@ enum execute_result execute(struct token tokens[], int count) {
         argv_left,
         NULL,
         NULL,
-        0
+        0,
+        background
     );
 
     if (status == 127)

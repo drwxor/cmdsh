@@ -9,7 +9,8 @@ enum token_type {
     TOKEN_PIPE,
     TOKEN_REDIRECT_OUT,
     TOKEN_REDIRECT_APPEND,
-    TOKEN_REDIRECT_IN
+    TOKEN_REDIRECT_IN,
+    TOKEN_BACKGROUND
 };
 
 struct token {

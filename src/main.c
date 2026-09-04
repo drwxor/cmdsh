@@ -2,12 +2,18 @@
 
 #include <signal.h>
 #include <stdio.h>
+#include <sys/wait.h>
 
 #include "config.h"
 #include "executor.h"
 #include "token.h"
 
 static volatile sig_atomic_t got_sigint = 0;
+
+static void reap_children(void) {
+    while (waitpid(-1, NULL, WNOHANG) > 0)
+        ;
+}
 
 static void handle_sigint(int sig) {
     (void)sig;
@@ -26,6 +32,8 @@ int main(void) {
     sigaction(SIGINT, &sa, NULL);
 
     for (;;) {
+        reap_children();
+
         got_sigint = 0;
 
         fputs(PROMPT, stdout);

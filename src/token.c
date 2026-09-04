@@ -22,6 +22,14 @@ int tokenize(char *input, struct token tokens[]) {
             continue;
         }
 
+        if (*p == '&') {
+            tokens[count].type = TOKEN_BACKGROUND;
+            tokens[count].value = "&";
+            count++;
+            p++;
+            continue;
+        }
+
         if (*p == '>' && *(p + 1) == '>') {
             tokens[count].type = TOKEN_REDIRECT_APPEND;
             tokens[count].value = ">>";
