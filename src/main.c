@@ -7,6 +7,7 @@
 #include "config.h"
 #include "executor.h"
 #include "token.h"
+#include "lineedit.h"
 
 static volatile sig_atomic_t got_sigint = 0;
 
@@ -36,10 +37,17 @@ int main(void) {
 
         got_sigint = 0;
 
-        fputs(PROMPT, stdout);
+        const char *prompt;
+
+        if (geteuid() == 0)
+            prompt = ROOT_PROMPT;
+        else
+            prompt = USER_PROMPT;
+
+        fputs(prompt, stdout);
         fflush(stdout);
 
-        if (fgets(input, sizeof(input), stdin) == NULL) {
+        if (line_read(input, prompt, sizeof(input)) < 0) {
             if (got_sigint) {
                 clearerr(stdin);
                 fputc('\n', stdout);

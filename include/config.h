@@ -1,6 +1,9 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-static const char PROMPT[] = "% ";
+#include <unistd.h>
+
+#define USER_PROMPT "$ "
+#define ROOT_PROMPT "# "
 
 #endif // CONFIG_H
