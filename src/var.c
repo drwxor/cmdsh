@@ -101,6 +101,38 @@ const char *var_get(const struct variables *vars, const char *name) {
     return vars->items[index].value;
 }
 
+int var_import(struct variables *vars, char *envp[]) {
+    for (int i = 0; envp[i] != NULL; i++) {
+        char *equals = strchr(envp[i], '=');
+
+        if (equals == NULL)
+            continue;
+
+        size_t name_len = (size_t)(equals - envp[i]);
+        char *name = malloc(name_len + 1);
+
+        if (name == NULL)
+            return -1;
+
+        memcpy(name, envp[i], name_len);
+        name[name_len] = '\0';
+
+        if (var_set(vars, name, equals + 1) != 0) {
+            free(name);
+            return -1;
+        }
+
+        if (var_export(vars, name) != 0) {
+            free(name);
+            return -1;
+        }
+
+        free(name);
+    }
+
+    return 0;
+}
+
 int var_unset(struct variables *vars, const char *name) {
     int index;
     size_t i;
