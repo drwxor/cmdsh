@@ -1,3 +1,5 @@
+#define _POSIX_C_SOURCE 200809L
+
 #include <fcntl.h>
 #include <stddef.h>
 #include <stdlib.h>
@@ -79,7 +81,8 @@ static int process_execute(
     char *input_file,
     char *output_file,
     int append,
-    int background
+    int background,
+    char *temporary_assignment
 ) {
     pid_t pid = fork();
 
@@ -88,6 +91,23 @@ static int process_execute(
 
     if (pid == 0) {
         int fd;
+
+        if (temporary_assignment != NULL) {
+            char *equals = strchr(temporary_assignment, '=');
+
+            if (equals != NULL) {
+                *equals = '\0';
+
+                if (setenv(
+                    temporary_assignment,
+                    equals + 1,
+                    1
+                ) != 0)
+                    _exit(126);
+
+                *equals = '=';
+            }
+        }
 
         if (input_file != NULL) {
             fd = open(input_file, O_RDONLY);
@@ -137,6 +157,23 @@ static int process_execute(
 
     if (WIFSIGNALED(status))
         return 128 + WTERMSIG(status);
+
+    return 1;
+}
+
+static int is_assignment(const char *word) {
+    const char *equals = strchr(word, '=');
+
+    if (equals == NULL || equals == word)
+        return 0;
+
+    for (const char *p = word; p < equals; p++) {
+        if (!((*p >= 'a' && *p <= 'z') ||
+              (*p >= 'A' && *p <= 'Z') ||
+              (*p >= '0' && *p <= '9') ||
+              *p == '_'))
+            return 0;
+    }
 
     return 1;
 }
@@ -239,6 +276,8 @@ enum execute_result execute(
     int and_index = -1;
     int background = 0;
 
+    char *temporary_assignment = NULL;
+
     if (count > 0 &&
         tokens[count - 1].type == TOKEN_BACKGROUND) {
         background = 1;
@@ -258,6 +297,13 @@ enum execute_result execute(
     }
 
     for (int i = 0; i < count; i++) {
+        if (tokens[i].type == TOKEN_WORD &&
+            left_argc == 0 &&
+            is_assignment(tokens[i].value)) {
+            temporary_assignment = tokens[i].value;
+            continue;
+        }
+
         if (tokens[i].type == TOKEN_PARAMETER) {
             if (i + 1 >= count || tokens[i + 1].type != TOKEN_WORD)
                 return EXECUTE_ERROR;
@@ -306,7 +352,8 @@ enum execute_result execute(
             NULL,
             NULL,
             0,
-            0
+            0,
+            temporary_assignment
         );
 
         if (status == 127)
@@ -360,7 +407,8 @@ enum execute_result execute(
         NULL,
         NULL,
         0,
-        background
+        background,
+        temporary_assignment
     );
 
     if (status == 127)
