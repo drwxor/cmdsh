@@ -37,7 +37,7 @@ int main(void) {
 
         got_sigint = 0;
 
-        const char *prompt;
+        char *prompt;
 
         if (geteuid() == 0)
             prompt = ROOT_PROMPT;
