@@ -1,2 +1,2 @@
-# cbld
-## simple build system on C
+# cmdsh
+## simple shell on C
