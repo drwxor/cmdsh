@@ -1,0 +1,4 @@
+#!/bin/sh
+
+mkdir -p /usr/local/bin/
+cp cmdsh /usr/local/bin/cmdsh
