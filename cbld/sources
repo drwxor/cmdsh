@@ -3,3 +3,4 @@ src/token.c
 src/executor.c
 src/builtin.c
 src/lineedit.c
+src/var.c

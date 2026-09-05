@@ -1,11 +1,16 @@
 #include <fcntl.h>
 #include <stddef.h>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <stdio.h>
 
 #include "executor.h"
 #include "builtin.h"
+#include "token.h"
+#include "var.h"
 
 static enum execute_result process_execute_pipe(
     char *argv_left[],
@@ -136,7 +141,94 @@ static int process_execute(
     return 1;
 }
 
-enum execute_result execute(struct token tokens[], int count) {
+static char *expand_word(const char *word, struct variables *vars) {
+    size_t len = strlen(word);
+    size_t capacity = len + 1;
+    size_t out_len = 0;
+    char *result = malloc(capacity);
+
+    if (result == NULL)
+        return NULL;
+
+    for (size_t i = 0; i < len; ) {
+        if (word[i] != '$') {
+            if (out_len + 2 > capacity) {
+                capacity *= 2;
+                result = realloc(result, capacity);
+
+                if (result == NULL)
+                    return NULL;
+            }
+
+            result[out_len++] = word[i++];
+            continue;
+        }
+
+        i++;
+
+        size_t start = i;
+
+        while (i < len &&
+               ((word[i] >= 'a' && word[i] <= 'z') ||
+                (word[i] >= 'A' && word[i] <= 'Z') ||
+                (word[i] >= '0' && word[i] <= '9') ||
+                word[i] == '_')) {
+            i++;
+        }
+
+        if (start == i) {
+            if (out_len + 2 > capacity) {
+                capacity *= 2;
+                result = realloc(result, capacity);
+
+                if (result == NULL)
+                    return NULL;
+            }
+
+            result[out_len++] = '$';
+            continue;
+        }
+
+        char name[128];
+        size_t name_len = i - start;
+
+        if (name_len >= sizeof(name)) {
+            free(result);
+            return NULL;
+        }
+
+        memcpy(name, word + start, name_len);
+        name[name_len] = '\0';
+
+        const char *value = var_get(vars, name);
+
+        if (value == NULL)
+            value = "";
+
+        size_t value_len = strlen(value);
+
+        while (out_len + value_len + 1 > capacity) {
+            capacity *= 2;
+            result = realloc(result, capacity);
+
+            if (result == NULL)
+                return NULL;
+        }
+
+        memcpy(result + out_len, value, value_len);
+        out_len += value_len;
+    }
+
+    result[out_len] = '\0';
+
+    return result;
+}
+
+enum execute_result execute(
+    struct token tokens[],
+    int count,
+    struct variables *vars
+) {
     char *argv_left[MAX_ARGS];
     char *argv_right[MAX_ARGS];
 
@@ -154,6 +246,36 @@ enum execute_result execute(struct token tokens[], int count) {
     }
 
     for (int i = 0; i < count; i++) {
+        if (tokens[i].type != TOKEN_WORD)
+            continue;
+
+        char *expanded = expand_word(tokens[i].value, vars);
+
+        if (expanded == NULL)
+            return EXECUTE_ERROR;
+
+        tokens[i].value = expanded;
+    }
+
+    for (int i = 0; i < count; i++) {
+        if (tokens[i].type == TOKEN_PARAMETER) {
+            if (i + 1 >= count || tokens[i + 1].type != TOKEN_WORD)
+                return EXECUTE_ERROR;
+
+            const char *value = var_get(vars, tokens[i + 1].value);
+
+            if (value == NULL)
+                value = "";
+
+            tokens[i].value = (char *)value;
+            tokens[i].type = TOKEN_WORD;
+
+            for (int j = i + 1; j + 1 < count; j++)
+                tokens[j] = tokens[j + 1];
+
+            count--;
+        }
+
         if (tokens[i].type == TOKEN_PIPE) {
             pipe_index = i;
             break;
@@ -195,7 +317,8 @@ enum execute_result execute(struct token tokens[], int count) {
 
         return execute(
             &tokens[and_index + 1],
-            count - and_index - 1
+            count - and_index - 1,
+            vars
         );
     }
 
@@ -227,7 +350,7 @@ enum execute_result execute(struct token tokens[], int count) {
     if (left_argc == 0)
         return EXECUTE_OK;
 
-    int result = builtin_execute(argv_left);
+    int result = builtin_execute(argv_left, vars);
 
     if (result != -1)
         return result;

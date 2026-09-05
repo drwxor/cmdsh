@@ -8,6 +8,7 @@
 #include "executor.h"
 #include "token.h"
 #include "lineedit.h"
+#include "var.h"
 
 static volatile sig_atomic_t got_sigint = 0;
 
@@ -24,6 +25,7 @@ static void handle_sigint(int sig) {
 int main(void) {
     char input[1024];
     struct token tokens[MAX_TOKENS];
+    struct variables vars = {0};
 
     struct sigaction sa = {0};
     sa.sa_handler = handle_sigint;
@@ -62,7 +64,7 @@ int main(void) {
 
         int count = tokenize(input, tokens);
 
-        enum execute_result result = execute(tokens, count);
+        enum execute_result result = execute(tokens, count, &vars);
 
         if (result == EXECUTE_EXIT)
             break;
@@ -71,5 +73,6 @@ int main(void) {
             fprintf(stderr, "%s: command not found\n", tokens[0].value);
     }
 
+    var_free(&vars);
     return 0;
 }

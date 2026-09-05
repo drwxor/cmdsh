@@ -10,7 +10,8 @@ enum token_type {
     TOKEN_REDIRECT_OUT,
     TOKEN_REDIRECT_APPEND,
     TOKEN_REDIRECT_IN,
-    TOKEN_BACKGROUND
+    TOKEN_BACKGROUND,
+    TOKEN_PARAMETER,
 };
 
 struct token {
