@@ -12,7 +12,6 @@
 #include "lineedit.h"
 #include "var.h"
 
-
 static volatile sig_atomic_t got_sigint = 0;
 
 static void reap_children(void) {
