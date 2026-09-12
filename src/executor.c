@@ -14,10 +14,7 @@
 #include "token.h"
 #include "var.h"
 
-static enum execute_result process_execute_pipe(
-    char *argv_left[],
-    char *argv_right[]
-) {
+static enum execute_result process_execute_pipe(char *argv_left[], char *argv_right[]) {
     int pipefd[2];
 
     if (pipe(pipefd) < 0)
@@ -76,14 +73,7 @@ static enum execute_result process_execute_pipe(
     return EXECUTE_OK;
 }
 
-static int process_execute(
-    char *argv[],
-    char *input_file,
-    char *output_file,
-    int append,
-    int background,
-    char *temporary_assignment
-) {
+static int process_execute(char *argv[], char *input_file, char *output_file, int append, int background, char *temporary_assignment) {
     pid_t pid = fork();
 
     if (pid < 0)
@@ -261,11 +251,7 @@ static char *expand_word(const char *word, struct variables *vars) {
     return result;
 }
 
-enum execute_result execute(
-    struct token tokens[],
-    int count,
-    struct variables *vars
-) {
+enum execute_result execute(struct token tokens[], int count, struct variables *vars) {
     char *argv_left[MAX_ARGS];
     char *argv_right[MAX_ARGS];
 

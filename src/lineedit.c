@@ -35,12 +35,7 @@ static int terminal_raw(void) {
     return 0;
 }
 
-static void redraw_line(
-    const char *buffer,
-    char *prompt,
-    size_t length,
-    size_t cursor
-) {
+static void redraw_line(const char *buffer, char *prompt, size_t length, size_t cursor) {
     fputs("\r\033[K", stdout);
     fputs(prompt, stdout);
     fwrite(buffer, 1, length, stdout);
